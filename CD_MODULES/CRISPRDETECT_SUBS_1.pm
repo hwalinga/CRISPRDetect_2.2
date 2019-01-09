@@ -8524,16 +8524,7 @@ sub search_alternate_repeat_sequence()
 				#last;
 			}
 		
-		
-		#--------- check if there is just one repeat in the array
-		#if($#arr_of_model_repeats==0)
-		#	{
-		#		$new_model_repeat=$arr_of_model_repeats[0];
-		#	}
-		#else{
-		#		$new_model_repeat=$model_repeat;
-		#	}
-		
+
 		
 		
 	
@@ -8736,7 +8727,7 @@ sub get_matching_reference_repeat_and_direction()
 										my $mismatches=$arr_line[10];
 										my $gaps=$arr_line[11];
 												
-										my $tmp_matching_ref_repeat_seq=`grep '$arr_line[0]' -A 1 $blast_db_file_of_known_repeats | grep -v '>' >&1`;	
+										my $tmp_matching_ref_repeat_seq=`grep -F '$arr_line[0]' -A 1 $blast_db_file_of_known_repeats | grep -v '>' >&1`;	
 										chomp $tmp_matching_ref_repeat_seq;$tmp_matching_ref_repeat_seq=~s/\r//g;
 										
 										#print "\$tmp_matching_ref_repeat_seq=$tmp_matching_ref_repeat_seq\n";
@@ -8762,7 +8753,7 @@ sub get_matching_reference_repeat_and_direction()
 												$ref_repeat_family=$arr_t1[$#arr_t1];
 												
 												#------ get the original known repeat --------
-												my @arr_t2=`grep '$arr_line[0]' -A 1 $blast_db_file_of_known_repeats >&1`;												
+												my @arr_t2=`grep -F '$arr_line[0]' -A 1 $blast_db_file_of_known_repeats >&1`;												
 												$matching_reference_repeat=$arr_t2[1];
 												chomp $matching_reference_repeat;$matching_reference_repeat=~s/\r//g;
 												
@@ -8806,292 +8797,6 @@ sub get_matching_reference_repeat_and_direction()
 				return($matching_reference_repeat,$ref_repeat_family,$array_direction,$observed_percent_similarity);
 		#	}
 
-
-		#----- following block no longer in use :   by Ambarish on 10/04/2015
-		
-		#####---- the following block is essential for web-server, as a new DR can be provided by user. without this block, the repeats will never be searched. [added 8th-Aug-2014: ambarish]
-		#####
-		#------------ first check in the lib of repeats with the model_repeat 
-		foreach my $ref_repeat(keys %{$lib_of_repeats_with_confirmed_direction})
-			{
-				$ref_repeat=~tr/U/T/;
-
-				
-						my $model_repeat_rc=$model_repeat; $model_repeat_rc=reverse $model_repeat_rc; $model_repeat_rc=~tr/ACGT/TGCA/;
-						
-						
-						
-						if($ref_repeat=~/$model_repeat/ or $model_repeat=~/$ref_repeat/)
-							{
-								if($ref_repeat=~/$model_repeat/)
-									{
-										$observed_percent_similarity=int((length($model_repeat)/int(length($ref_repeat)))*100);
-									}
-								elsif($model_repeat=~/$ref_repeat/)
-									{
-										$observed_percent_similarity=int((length($ref_repeat)/int(length($model_repeat)))*100);
-									}	
-								
-								if($observed_percent_similarity<80){next;}
-									
-								$array_direction="F";
-								$ref_repeat_family=$lib_of_repeats_with_confirmed_direction->{$ref_repeat};
-								
-								$match_found=1;
-								$case_found=1;
-								$matching_reference_repeat=$ref_repeat;
-								#print "\n\nForward: [$accession] The $model_repeat matched with $ref_repeat and belongs to group: $lib_of_repeats_with_confirmed_direction->{$ref_repeat} .\n";
-								
-								#$observed_percent_similarity=100;
-								last;
-							}
-						elsif($ref_repeat=~/$model_repeat_rc/ or $model_repeat_rc=~/$ref_repeat/)
-							{
-								
-								if($ref_repeat=~/$model_repeat_rc/)
-									{
-										$observed_percent_similarity=int((length($model_repeat_rc)/int(length($ref_repeat)))*100);
-									}
-								elsif($model_repeat_rc=~/$ref_repeat/)
-									{
-										$observed_percent_similarity=int((length($ref_repeat)/int(length($model_repeat_rc)))*100);
-									}	
-								
-								if($observed_percent_similarity<80 or $observed_percent_similarity>100){next;}
-								
-								$array_direction="R";
-								$ref_repeat_family=$lib_of_repeats_with_confirmed_direction->{$ref_repeat};
-								
-								$match_found=1;
-								$case_found=1;
-								$matching_reference_repeat=$ref_repeat;
-								
-								#print "\n\nReverse: [$accession] The $model_repeat_rc matched with $ref_repeat and belongs to group: $lib_of_repeats_with_confirmed_direction->{$ref_repeat} .\n";	
-								
-								#$observed_percent_similarity=100;					
-								last;
-							}	
-							
-			}
-
-		if($match_found==0)
-			{
-				#my $tmp_letters="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-				#my @arr_letters=split('',$tmp_letters);
-				
-				foreach my $ref_repeat(sort{length($lib_of_repeats_with_confirmed_direction->{$b})<=>length($lib_of_repeats_with_confirmed_direction->{$a})}keys %{$lib_of_repeats_with_confirmed_direction})
-					{
-						$ref_repeat=~tr/U/T/;
-						
-						my $top_line="";
-						my $bottom_line="";	
-				
-				
-						my $model_repeat_rc=$model_repeat; $model_repeat_rc=reverse $model_repeat_rc; $model_repeat_rc=~tr/ACGT/TGCA/;	
-									
-						
-									
-						#while(not $best_bottom_line)
-						#{
-						
-						#----- read the contents of the output files and store them in arrays, then delete all the files: needed like this, or else files remains undeleted
-						my @arr_rd1;
-						my @arr_rd2;
-						
-						my $outfile1=&run_water($range,$accession,$model_repeat,$ref_repeat,10,9);	
-						
-						if(-e "$tmp_dir\/$outfile1")
-							{
-								open(RD1,"$tmp_dir\/$outfile1") or print "$! [$outfile1] <br>";
-								flock(RD1,2);
-								@arr_rd1=<RD1>;
-								close(RD1);
-								
-								unlink("$tmp_dir\/$outfile1");
-							}
-						
-						my $outfile2=&run_water($range,$accession,$model_repeat_rc,$ref_repeat,10,9);	
-						if(-e "$tmp_dir\/$outfile2")
-							{	
-								open(RD2,"$tmp_dir\/$outfile2") or print "$! [$outfile2]<br>";
-								flock(RD2,2);
-								@arr_rd2=<RD2>;
-								close(RD2);
-								
-								unlink("$tmp_dir\/$outfile2") or print "$!\n";
-							}
-												
-
-							
-						
-						#------------------- check forward orientation ---------------------------------------------------------------				
-						
-						
-						my $tl_count1=0;
-						my $bl_count1=0;
-						
-						foreach my $line(@arr_rd1)
-							{
-												#print $line,"\n";
-								chomp $line;$line=~s/\r//g;
-								if(not $line or $line=~/#/){next;}
-								elsif($line=~/\d+/)
-									{
-										#print "$line\n";
-										$line=~s/^\s+//;$line=~s/\s+/\t/g;
-										my($start,$seq,$stop)=split('\t',$line);
-										if($tl_count1==0){$top_line=$line;$tl_count1++;}
-										elsif($bl_count1==0){$bottom_line=$line;$bl_count1++;}
-									}						
-							}
-										
-																
-						#print "$top_line\n$bottom_line\n\n";	
-						
-						if($top_line eq "" or $bottom_line eq ""){next;}
-						
-						my($top_start1,$top_seq1,$top_stop1)=split('\t',$top_line);
-						#	$top_start1=$top_start1-1;
-						#	$top_stop1=$top_stop1-1;
-							
-						my($bottom_start1,$bottom_seq1,$bottom_stop1)=split('\t',$bottom_line);
-						#	$bottom_start1=$bottom_start1-1;
-						#	$bottom_stop1=$bottom_stop1-1;
-						
-						if(not defined $top_seq1 or $top_seq1=~/-/ or not defined $bottom_seq1 or $bottom_seq1=~/-/){next;}
-						
-						my $similarity_score1=&get_similarity_score($top_seq1,$bottom_seq1);
-						
-						#$observed_percent_similarity=$similarity_score1;
-						if(length($ref_repeat)>length($model_repeat))
-							{
-								$observed_percent_similarity=int(($similarity_score1/int(length($ref_repeat)))*100);
-							}
-						else{
-								$observed_percent_similarity=int(($similarity_score1/int(length($model_repeat)))*100);
-							}
-						#$observed_percent_similarity=int(($similarity_score1/int(length($model_repeat)))*100);
-						
-						
-						
-						#print "$ref_repeat ($observed_percent_similarity): $similarity_score1>length($model_repeat)*.95",$similarity_score1>length($model_repeat)*.95,"\n";#exit;
-						#if((length($top_seq1)>=length($model_repeat)*0.95 or length($model_repeat)>=length($top_seq1)) and (length($ref_repeat)-$similarity_score1)<=$allowed_no_of_mismatches and $observed_percent_similarity>=80)#>=int(length($ref_repeat)*.95))
-						if($observed_percent_similarity<=100 and (length($top_seq1)>=length($model_repeat)*($minimum_length_distribution/100) or length($model_repeat)>=length($top_seq1)) and (length($ref_repeat)-$similarity_score1)<=$allowed_no_of_mismatches and $observed_percent_similarity>=$allowed_percent_similarity)#>=int(length($ref_repeat)*.95))
-							{
-								$array_direction="F";
-								$match_found=1;	
-								$case_found=1;
-								$matching_reference_repeat=$ref_repeat;
-								$ref_repeat_family=$lib_of_repeats_with_confirmed_direction->{$ref_repeat};
-								
-								
-								
-								#$observed_percent_similarity=$similarity_score1;
-								#$observed_percent_similarity=int(($similarity_score1/int(length($model_repeat)))*100);
-								
-								#print "\n\nQ: Forward: [$accession] The $model_repeat matched with $ref_repeat and belongs to group: $lib_of_repeats_with_confirmed_direction->{$ref_repeat} .\n";
-								#print "\$observed_percent_similarity=$observed_percent_similarity\n";
-								#print "\t$top_line\n\t$bottom_line\n\n";
-								
-								
-							}
-						else{
-								#unlink("$tmp_dir\/$outfile1");
-							}	
-						
-						if($match_found==1)
-							{														
-								last;
-							}
-						
-						
-						
-						
-						#-------------- now check reverse orientation ---------------------------------------------
-						
-									
-						#---- now open the output file and get the alignment, store the alignment in a compiled file
-						
-						my $top_line2="";
-						my $bottom_line2="";
-						
-						
-						
-						my $tl_count2=0;
-						my $bl_count2=0;
-						
-						foreach my $line(@arr_rd2)
-							{
-												#print $line,"\n";
-								chomp $line;$line=~s/\r//g;
-								if(not $line or $line=~/#/){next;}
-								elsif($line=~/\d+/)
-									{
-										#print "$line\n";
-										$line=~s/^\s+//;$line=~s/\s+/\t/g;
-										my($start,$seq,$stop)=split('\t',$line);
-										if($tl_count2==0){$top_line2=$line;$tl_count2++;}
-										elsif($bl_count2==0){$bottom_line2=$line;$bl_count2++;}
-									}						
-							}
-										
-										#print "\n";						
-													
-						
-										
-						#print "$top_line\n$bottom_line\n\n";	
-						if($top_line2 eq "" or $bottom_line2 eq ""){next;}
-						
-						my($top_start2,$top_seq2,$top_stop2)=split('\t',$top_line2);
-						#	$top_start1=$top_start1-1;
-						#	$top_stop1=$top_stop1-1;
-							
-						my($bottom_start2,$bottom_seq2,$bottom_stop2)=split('\t',$bottom_line2);
-						#	$bottom_start1=$bottom_start1-1;
-						#	$bottom_stop1=$bottom_stop1-1;
-						
-						
-						if($top_seq2=~/-/ or $bottom_seq2=~/-/){next;}
-						if(not defined $top_seq2 or $top_seq2=~/-/ or not defined $bottom_seq2 or $bottom_seq2=~/-/){next;}
-						
-						my $similarity_score2=&get_similarity_score($top_seq2,$bottom_seq2);
-						#$observed_percent_similarity=$similarity_score2;
-						if(length($ref_repeat)>length($model_repeat))
-							{
-								$observed_percent_similarity=int(($similarity_score2/int(length($ref_repeat)))*100);
-							}
-						else{
-								$observed_percent_similarity=int(($similarity_score2/int(length($model_repeat)))*100);
-							}		
-						
-						#if((length($top_seq2)>length($model_repeat)*0.95 or length($model_repeat)>=length($top_seq2))and (length($ref_repeat)-$similarity_score2)<=$allowed_no_of_mismatches and $observed_percent_similarity>=80)#$similarity_score2>=int(length($ref_repeat)*.95))
-						if($observed_percent_similarity<=100 and (length($top_seq2)>length($model_repeat)*($minimum_length_distribution/100) or length($model_repeat)>=length($top_seq2)) and (length($ref_repeat)-$similarity_score2)<=$allowed_no_of_mismatches and $observed_percent_similarity>=$allowed_percent_similarity)#$similarity_score2>=int(length($ref_repeat)*.95))
-							{					
-								
-								$array_direction="R";
-								$match_found=1;	
-								$case_found=1;
-								$matching_reference_repeat=$ref_repeat;		
-								$ref_repeat_family=$lib_of_repeats_with_confirmed_direction->{$ref_repeat};	
-										
-								
-								
-								
-								#print "\n\nQ: Reverse: [$accession] The $model_repeat matched with $model_repeat_rc and belongs to group: $lib_of_repeats_with_confirmed_direction->{$ref_repeat} .\n";								
-								#print "\$observed_percent_similarity=$observed_percent_similarity\n";
-								#print "\t$top_line2\n\t$bottom_line2\n\n";					
-								
-							}
-						else{
-								#unlink("$tmp_dir\/$outfile2");
-							}
-						if($match_found==1){last;}
-					}
-		
-			}
-			
-			
-		return($matching_reference_repeat,$ref_repeat_family,$array_direction,$observed_percent_similarity);	
 	}
 
 
@@ -10828,7 +10533,7 @@ sub create_gff_file()
 				$strand="-";
 			}	
 		#-------- first double check the crispr_index 
-		my @arr_gff_lines=`grep '$accession' $gff_file | grep 'repeat_region' >&1`;
+		my @arr_gff_lines=`grep -F '$accession' $gff_file | grep 'repeat_region' >&1`;
 		if(defined $arr_gff_lines[0] and $arr_gff_lines[0]=~/\S+/)
 			{
 				$crispr_index=($#arr_gff_lines+1)+1;
@@ -12213,7 +11918,7 @@ sub finalize_the_array()
 		if($all_gene_positions_file ne "NA")
 			{
 				my $strain="NA";
-				my @ret=`grep -w '$accession' $tmp_dir\/$all_gene_positions_file | grep 'STRAIN' >&1`;
+				my @ret=`grep -Fw '$accession' $tmp_dir\/$all_gene_positions_file | grep 'STRAIN' >&1`;
 				if(defined $ret[0] and $ret[0]=~/\S+/)
 					{						
 						my @arr_s1=split('\t',$ret[0]);
@@ -12312,7 +12017,7 @@ sub get_all_cds_or_crispr_positions()
 		my @arr_gene_positions;
 		
 		#print "\ngrep -w '$accession' $tmp_dir\/$all_gene_positions_file | grep -w '$search_term'\n\n";
-		@arr_gene_positions=`grep -w '$accession' $tmp_dir\/$all_gene_positions_file | grep -w '$search_term' >&1`;
+		@arr_gene_positions=`grep -Fw '$accession' $tmp_dir\/$all_gene_positions_file | grep -w '$search_term' >&1`;
 		
 		if($#arr_gene_positions<=0)
 			{
